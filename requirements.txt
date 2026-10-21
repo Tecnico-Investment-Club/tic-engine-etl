@@ -1,7 +1,0 @@
-alpaca-py==0.43.5
-mypy==1.10.0
-psycopg2-binary==2.9.12
-pydantic==2.13.4
-pydantic-settings==2.14.2
-pyyaml==6.0.3
-ruff==0.4.8
