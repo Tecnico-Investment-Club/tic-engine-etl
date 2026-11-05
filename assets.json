@@ -1,0 +1,12 @@
+{
+  "asset_jobs": [
+    {
+      "broker": "alpaca",
+      "asset_class": "crypto",
+      "timeframe": {"hours": 1},
+      "symbols": {"btc-usd": "BTC/USD", "eth-usd": "ETH/USD", "ltc-usd": "LTC/USD", "bch-usd": "BCH/USD", "link-usd": "LINK/USD",
+                  "avax-usd": "AVAX/USD", "doge-usd": "DOGE/USD", "dot-usd": "DOT/USD", "uni-usd": "UNI/USD", "aave-usd": "AAVE/USD"},
+      "lookback_bars": 200,
+      "location": "us" 
+    }]
+}
