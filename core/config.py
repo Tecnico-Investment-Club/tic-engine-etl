@@ -2,6 +2,33 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from datetime import timedelta
+import os
+
+
+###make object containing postgres info wih env
+
+@dataclass(frozen=True,kw_only=True)
+class PostgresConfig():
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+    minimum_connections: int
+    maximum_connections: int
+
+POSTGRES_CONFIG = PostgresConfig(
+                    host = os.getenv('POSTGRES_HOST'),
+                    port = int(os.getenv('POSTGRES_PORT')),
+                    database = os.getenv('POSTGRES_DB'),
+                    user = os.getenv('POSTGRES_USER'),
+                    password= os.getenv('POSTGRES_PASSWORD'),
+                    minimum_connections= 0,
+                    maximum_connections= 10
+)
+
+
+
 
 @dataclass(frozen=True)
 class AssetJob():
