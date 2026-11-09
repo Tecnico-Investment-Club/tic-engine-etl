@@ -1,7 +1,7 @@
 import psycopg2
 from core.models import Candle
 from contextlib import contextmanager
-from datetime import timedelta
+from datetime import timedelta,datetime,timezone
 
 
 #remember to convert timeframe into seconds and then into timedelta
@@ -20,6 +20,8 @@ class PostgresRepository():
             yield database_connection
         finally:
             self.connection_pool.putconn(database_connection)
+    
+    
     @staticmethod
     def convert_timedelta_seconds(timeframe:timedelta)->Int:
         return int(timeframe.total_seconds())
@@ -88,3 +90,44 @@ class PostgresRepository():
             with connection:
                 with connection.cursor() as cursor:
                     cursor.execute(INSERT_CANDLE,values)
+
+
+    #make first to find one stimestamp
+    ## then make to find on interval
+
+    def find_candle(self,asset_id:str,timestamp:datetime,timeframe:timedelta) ->Candle:
+        PROMPT="""SELECT * FROM candle WHERE timestamp = %s"""
+        timeframe = self.convert_timedelta_seconds(timeframe)
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(PROMPT,(asset_id,timestamp,timeframe))
+                    candle = cursor.fetchall()
+        return candle
+
+
+
+    #turn them into candle objects , make method for that
+    def get_candles(self,asset_id:str,timeframe:timedelta,start_time:datetime,end_time:datetime)->List[Candle]:
+        PROMPT = """SELECT * FROM candle WHERE asset_id = %s AND timeframe = %s AND timestamp >= %s AND timestamp <= %s;"""
+        timeframe = self.convert_timedelta_seconds(timeframe)
+        parameters =(asset_id,timeframe,start_time,end_time)
+        
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(PROMPT,parameters)
+                    candles = cursor.fetchall()
+        return candles
+
+    def last_candles(self, asset_id:str,timeframe:timedelta,number_candles:int)->List[Candle]:
+        PROMPT = """SELECT * FROM candle WHERE asset_id = %s AND timeframe = %s ORDER BY timestamp DESC LIMIT %s;"""
+        timeframe = self.convert_timedelta_seconds(timeframe)
+        parameters = (asset_id,timeframe,number_candles)
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursos:
+                    cursos.execute(PROMPT,parameters)
+                    candles = cursos.fetchall()
+        return candles
+    
