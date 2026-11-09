@@ -53,6 +53,7 @@ class PostgresRepository():
                             trade_count INT NOT NULL,
                             timestamp TIMESTAMPTZ NOT NULL,
                             timeframe INT NOT NULL,
+                            vwap FLOAT8 NOT NULL,
                             PRIMARY KEY(asset_id,timestamp,timeframe)  
                         );
                         """
@@ -68,7 +69,8 @@ class PostgresRepository():
         trade_count = candle.trade_count
         timestamp = candle.timestamp
         timeframe = self.convert_timedelta_seconds(candle.timeframe)
-        values = (open,close,high,low,asset_id,volume,trade_count,timestamp,timeframe,)
+        vwap = candle.vwap
+        values = (open,close,high,low,asset_id,volume,trade_count,timestamp,timeframe,vwap)
         INSERT_CANDLE = """
                         INSERT INTO candle
                         (
@@ -80,10 +82,11 @@ class PostgresRepository():
                         volume,
                         trade_count,
                         timestamp,
-                        timeframe
+                        timeframe,
+                        vwap
                         ) 
                         VALUES (
-                        %s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,)
                         ON CONFLICT (asset_id,timestamp,timeframe) DO NOTHING;
                         """
         with self._get_connection() as connection:
@@ -96,7 +99,7 @@ class PostgresRepository():
     ## then make to find on interval
 
     def find_candle(self,asset_id:str,timestamp:datetime,timeframe:timedelta) ->Candle:
-        PROMPT="""SELECT * FROM candle WHERE timestamp = %s"""
+        PROMPT="""SELECT * FROM candle WHERE timestamp = %s AND asset_id = %s AND timeframe = %s"""
         timeframe = self.convert_timedelta_seconds(timeframe)
         with self._get_connection() as connection:
             with connection:
@@ -117,7 +120,10 @@ class PostgresRepository():
             with connection:
                 with connection.cursor() as cursor:
                     cursor.execute(PROMPT,parameters)
-                    candles = cursor.fetchall()
+                    candles_tupples = cursor.fetchall()
+        candles = []
+        for candle in candles_tupples:
+            candles.append(self.tuple_to_candle(candle))
         return candles
 
     def last_candles(self, asset_id:str,timeframe:timedelta,number_candles:int)->List[Candle]:
@@ -128,6 +134,29 @@ class PostgresRepository():
             with connection:
                 with connection.cursor() as cursos:
                     cursos.execute(PROMPT,parameters)
-                    candles = cursos.fetchall()
+                    candles_tupples = cursos.fetchall()
+        candles = []
+        for candle in candles_tupples:
+            candles.append(self.tuple_to_candle(candle))
         return candles
+
+
+
+    @staticmethod
+    def tuple_to_candle(candle_info: tuple) -> Candle:
+        return Candle(
+            open=candle_info[0],
+            close=candle_info[1],
+            high=candle_info[2],
+            low=candle_info[3],
+            asset_id=candle_info[4],
+            broker="placeholder",  
+            volume=candle_info[5],
+            trade_count=candle_info[6],
+            timestamp=candle_info[7],
+            timeframe=PostgresRepository.convert_seconds_seconds(candle_info[8]),
+            vwap=candle_info[9],
+            )
+
+
     
