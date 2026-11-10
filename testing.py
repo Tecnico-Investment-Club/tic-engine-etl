@@ -72,31 +72,23 @@ def create_candles(amount:int = 0)->list[Candle]:
     return candles
 
 def main():
-    connection_pool = ThreadedConnectionPool(
-                            host=POSTGRES_CONFIG.host,
-                            port=POSTGRES_CONFIG.port ,
-                            database=POSTGRES_CONFIG.database,
-                            user=POSTGRES_CONFIG.user,
-                            password=POSTGRES_CONFIG.password,
-                            minconn=POSTGRES_CONFIG.minimum_connections,
-                            maxconn=POSTGRES_CONFIG.maximum_connections,
-    )
-
-    postgres_repo = PostgresRepository(connection_pool)
-    postgres_repo.drop_table()
-    postgres_repo._check_table()
     
-    candles = create_candles()
-    for candle in candles:
-        postgres_repo.insert_candle(candle)
 
-    last_candle = postgres_repo.last_candle('btc',timedelta(minutes=20))
-    print(last_candle)
+    
+    
+    postgres_repo = PostgresRepository()
+    
+    #candles = create_candles()
+    #for candle in candles:
+        #postgres_repo.insert_candle(candle)
 
-    candles_interval = postgres_repo.get_candles('microsoft',timedelta(minutes=60),datetime(2025,11,3 ,tzinfo=timezone.utc),end_time=datetime(2026,5,2, tzinfo=timezone.utc))
-    for candle in candles_interval:
-        print(candle.timestamp)
+    #last_candle = postgres_repo.last_candle('btc',timedelta(minutes=20))
+    #print(last_candle)
 
+    #candles_interval = postgres_repo.get_candles('microsoft',timedelta(minutes=60),datetime(2025,11,3 ,tzinfo=timezone.utc),end_time=datetime(2026,5,2, tzinfo=timezone.utc))
+    #for candle in candles_interval:
+        #print(candle.timestamp)
+    #postgres_repo.drop_table()
 if __name__ == "__main__":
     main()
 

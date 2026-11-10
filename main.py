@@ -6,24 +6,12 @@ from core.models import Candle
 from datetime import datetime,timezone,timedelta
 
 
-
-
 def main():
-    connection_pool = ThreadedConnectionPool(
-                            host=POSTGRES_CONFIG.host,
-                            port=POSTGRES_CONFIG.port ,
-                            database=POSTGRES_CONFIG.database,
-                            user=POSTGRES_CONFIG.user,
-                            password=POSTGRES_CONFIG.password,
-                            minconn=POSTGRES_CONFIG.minimum_connections,
-                            maxconn=POSTGRES_CONFIG.maximum_connections,
-    )
-
-    postgres_repo = PostgresRepository(connection_pool)
-    
     
 
-
+    postgres_repo = PostgresRepository()
+    
+    
 if __name__ == "__main__":
     main()
 

@@ -1,16 +1,14 @@
-import psycopg2
+from psycopg2.pool import ThreadedConnectionPool
 from core.models import Candle
 from contextlib import contextmanager
 from datetime import timedelta,datetime,timezone
-
-
-#remember to convert timeframe into seconds and then into timedelta
+from core.config import POSTGRES_CONFIG
 
 
 class PostgresRepository():
-    def __init__(self, connection_pool):
-        self.connection_pool = connection_pool
-        self._check_table()
+    def __init__(self):
+        
+        self.start_repo()
 
 
     @contextmanager
@@ -26,6 +24,7 @@ class PostgresRepository():
     def convert_timedelta_seconds(timeframe:timedelta)->Int:
         return int(timeframe.total_seconds())
 
+
     @staticmethod
     def convert_seconds_seconds(seconds_quantity:int)->timedelta:
         return timedelta(seconds=seconds_quantity)
@@ -37,7 +36,7 @@ class PostgresRepository():
                 with connection.cursor() as cursor:
                     cursor.execute("""DROP TABLE IF EXISTS candle""")
 
-                
+               
     def _check_table(self):
         with self._get_connection() as connection:
             with connection:
@@ -58,7 +57,7 @@ class PostgresRepository():
                         );
                         """
                     cursor.execute(CREATE_TABLE_CANDLE)
-
+    
     def insert_candle(self,candle:Candle):
         open = candle.open
         close = candle.close
@@ -174,4 +173,45 @@ class PostgresRepository():
                     cursor.execute(PROMPT,parameters)
                     candle_tuple = cursor.fetchone()
         return self.tuple_to_candle(candle_tuple)
+
+
+    #this shouild beocme init
+    def start_repo(self):
+        self.connection_pool = ThreadedConnectionPool(
+                                    host=POSTGRES_CONFIG.host,
+                                    port=POSTGRES_CONFIG.port ,
+                                    database=POSTGRES_CONFIG.database,
+                                    user=POSTGRES_CONFIG.user,
+                                    password=POSTGRES_CONFIG.password,
+                                    minconn=POSTGRES_CONFIG.minimum_connections,
+                                    maxconn=POSTGRES_CONFIG.maximum_connections,
+            )
+        self._check_tables()
+
     
+    TIMEFRAME_TO_TABLES = {
+        timedelta(minutes= 60): "candle_1hour",
+        timedelta(days=1): "candle_1day",
+        timedelta(minutes=1):"candles_1minute"
+    }
+
+    def _check_tables(self):
+        PROMPT = """CREATE TABLE IF NOT EXISTS {table_name}(
+                                    open FLOAT8 NOT NUll,
+                                    close FLOAT8 NOT NULL,
+                                    high FLOAT8 NOT NULL,
+                                    low FLOAT8 NOT NULL,
+                                    asset_id TEXT NOT NULL,
+                                    volume FLOAT8 NOT NULL,
+                                    trade_count INT NOT NULL,
+                                    timestamp TIMESTAMPTZ NOT NULL,
+                                    vwap FLOAT8 NOT NULL,
+                                    PRIMARY KEY(asset_id,timestamp)  
+                                );
+                                """
+
+        for  table in self.TIMEFRAME_TO_TABLES.values():
+            with self._get_connection() as connection:
+                with connection:
+                    with connection.cursor() as cursor:
+                        cursor.execute(PROMPT.format(table_name=table))
