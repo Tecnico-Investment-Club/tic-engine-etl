@@ -142,22 +142,21 @@ class PostgresRepository():
 
 
     @staticmethod
-    def tuple_to_candle(candle_info: tuple) -> Candle:
-        
+    def tuple_to_candle(candle_info: tuple, timeframe: timedelta) -> Candle | None:
         if candle_info:
             return Candle(
-                open=candle_info[0],
-                close=candle_info[1],
-                high=candle_info[2],
-                low=candle_info[3],
-                asset_id=candle_info[4],
-                broker="placeholder",  
-                volume=candle_info[5],
-                trade_count=candle_info[6],
-                timestamp=candle_info[7].astimezone(timezone.utc),
-                timeframe=PostgresRepository.convert_seconds_seconds(candle_info[8]),
-                vwap=candle_info[9],
-                )
+            open = candle_info[0],
+            close = candle_info[1],
+            high = candle_info[2],
+            low = candle_info[3],
+            asset_id = candle_info[4],
+            broker = "placeholder",
+            volume = candle_info[5],
+            trade_count = candle_info[6],
+            timestamp = candle_info[7].astimezone(timezone.utc),
+            timeframe = timeframe,
+            vwap = candle_info[8],
+            )
         else:
             return None
 
@@ -211,6 +210,69 @@ class PostgresRepository():
                                 """
 
         for  table in self.TIMEFRAME_TO_TABLES.values():
+            with self._get_connection() as connection:
+                with connection:
+                    with connection.cursor() as cursor:
+                        cursor.execute(PROMPT.format(table_name=table))
+
+
+
+    def insert_candles_new(self,candle : Candle):
+        PROMPT = """INSERT INTO {table_name}
+                                (
+                                open,
+                                close,
+                                high,
+                                low,
+                                asset_id,
+                                volume,
+                                trade_count,
+                                timestamp,
+                                vwap
+                                ) 
+                                VALUES (
+                                %s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                ON CONFLICT (asset_id,timestamp) DO NOTHING;
+                                """
+        parameters = (candle.open,candle.close,candle.high,candle.low,candle.asset_id,candle.volume,candle.trade_count,candle.timestamp,candle.vwap)
+        table_name = self.TIMEFRAME_TO_TABLES[candle.timeframe]
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursos:
+                    cursos.execute(PROMPT.format(table_name=table_name),parameters)
+
+
+    def find_candle_interval_new(self,asset_id,timeframe,start_time,end_time):
+        PROMPT = """SELECT * FROM {table_name} WHERE asset_id = %s AND timestamp>= %s AND TIMESTAMP<=%s ORDER BY timestamp DESC"""
+        parameters = (asset_id,start_time,end_time)
+        table_name = self.TIMEFRAME_TO_TABLES[timeframe]
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(PROMPT.format(table_name=table_name),parameters)
+                    candles_tuples = cursor.fetchall()
+        candles = []
+        for candle in candles_tuples:
+            candles.append(self.tuple_to_candle(candle,timeframe))
+        return candles
+
+
+    def find_last_candle_new(self,asset_id,timeframe):
+        PROMPT = """SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT 1"""
+        table_name = self.TIMEFRAME_TO_TABLES[timeframe]
+
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(PROMPT.format(table_name=table_name),(asset_id,))
+                    candle= cursor.fetchone()
+        return self.tuple_to_candle(candle,timeframe)
+
+    def kill_table(self):
+        tables = [table for table in self.TIMEFRAME_TO_TABLES.values()]
+
+        PROMPT = """DROP TABLE IF EXISTS {table_name}"""
+        for table in tables:
             with self._get_connection() as connection:
                 with connection:
                     with connection.cursor() as cursor:

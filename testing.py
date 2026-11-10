@@ -34,7 +34,7 @@ def create_candles(amount:int = 0)->list[Candle]:
 
     
     candles = []
-    intervals = [timedelta(minutes=60),timedelta(minutes=45),timedelta(minutes=20),timedelta(minutes=3),timedelta(seconds=45)]
+    intervals = [timedelta(minutes=60),timedelta(seconds=60),timedelta(days=1)]
     start = datetime(2026, 1, 1,tzinfo=timezone.utc)
     names = ['btc','eth','doge','apple','microsoft','nvidia','toysrus']
 
@@ -52,7 +52,7 @@ def create_candles(amount:int = 0)->list[Candle]:
             candle_floats.remove(low)
             candle_floats.remove(high)
             
-            interval=intervals[randint(0,4)]
+            interval=intervals[randint(0,len(intervals)-1)]
             timestamp = (start + (interval * randint(0,7700)))
 
             candle = Candle(
@@ -71,24 +71,41 @@ def create_candles(amount:int = 0)->list[Candle]:
             candles.append(candle)
     return candles
 
-def main():
-    
 
-    
+
+def random_datetimes():
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    start = base + timedelta(hours=randint(0, 5000))
+    end = start + timedelta(hours=randint(1, 2000))
+    return start, end
+
+
+def main():
+    postgres_repo = PostgresRepository()
+    postgres_repo.kill_table()
+    print("all tables dropped")
+
     
     postgres_repo = PostgresRepository()
+    print("tables created")
+
+    candles = create_candles()
+    for candle in candles:
+        postgres_repo.insert_candles_new(candle)
+    print("all candles created")
+
+    start, end = random_datetimes()
+    candles = postgres_repo.find_candle_interval_new("microsoft",timedelta(minutes=60),start,end)
+    for candle in candles:
+        print(candle.volume)
+    print("candles in interval found")
     
-    #candles = create_candles()
-    #for candle in candles:
-        #postgres_repo.insert_candle(candle)
 
-    #last_candle = postgres_repo.last_candle('btc',timedelta(minutes=20))
-    #print(last_candle)
+    candle = postgres_repo.find_last_candle_new("doge",timedelta(seconds=60))
+    print(candle.vwap)
+    print("last candle foudn")
 
-    #candles_interval = postgres_repo.get_candles('microsoft',timedelta(minutes=60),datetime(2025,11,3 ,tzinfo=timezone.utc),end_time=datetime(2026,5,2, tzinfo=timezone.utc))
-    #for candle in candles_interval:
-        #print(candle.timestamp)
-    #postgres_repo.drop_table()
+    
 if __name__ == "__main__":
     main()
 
