@@ -73,20 +73,20 @@ class PostgresRepository():
                                 ON CONFLICT (asset_id,timestamp,broker) DO NOTHING; """
         
         parameters = (candle.open,candle.close,candle.high,candle.low,candle.asset_id,candle.volume,candle.trade_count,candle.timestamp,candle.vwap,candle.broker)
-        table_name = self.TIMEFRAME_TO_TABLES[candle.timeframe]
+        table_name = self._timeframe_to_tables(candle.timeframe)
         
         with self._get_connection() as connection:
             with connection:
-                with connection.cursor() as cursos:
-                    cursos.execute(INSERT_CANDLES.format(table_name=table_name),parameters)
+                with connection.cursor() as cursor:
+                    cursor.execute(INSERT_CANDLES.format(table_name=table_name),parameters)
 
 
     def get_candles_interval(self,asset_id:str,timeframe:timedelta,start_time:datetime,end_time:datetime)->list[Candle]:
-        """gives most recent first"""
-        FIND_CANDLES = """SELECT * FROM {table_name} WHERE asset_id = %s AND timestamp>= %s AND TIMESTAMP<=%s ORDER BY timestamp DESC"""
+        """gives oldest first"""
+        FIND_CANDLES = """SELECT * FROM {table_name} WHERE asset_id = %s AND timestamp>= %s AND TIMESTAMP<=%s ORDER BY timestamp ASC"""
         
         parameters = (asset_id,start_time,end_time)
-        table_name = self.TIMEFRAME_TO_TABLES[timeframe]
+        table_name = self._timeframe_to_tables(timeframe)
 
         with self._get_connection() as connection:
             with connection:
@@ -100,31 +100,39 @@ class PostgresRepository():
         return candles
 
 
-    def get_last_candle(self,asset_id:str,timeframe:timedelta)->Candle:
-        PROMPT = """SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT 1"""
+    def get_last_candle(self,asset_id:str,timeframe:timedelta)->Candle | None:
+        GET_LAST_CANDLES = """SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT 1"""
 
         parameters = (asset_id,)
-        table_name = self.TIMEFRAME_TO_TABLES[timeframe]
+        table_name = self._timeframe_to_tables(timeframe)
 
         with self._get_connection() as connection:
             with connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(PROMPT.format(table_name=table_name),parameters)
+                    cursor.execute(GET_LAST_CANDLES.format(table_name=table_name),parameters)
                     candle= cursor.fetchone()
         
         return self.tuple_to_candle(candle,timeframe)
 
 
-    def drop_tables(self)->None:
-        tables = [table for table in self.TIMEFRAME_TO_TABLES.values()]
+    def get_lookback(self,asset_id:str,timeframe:timedelta,number_candles:int)->list[Candle]:
+        """oldest first"""
+        GET_LOOKBACK = """SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT %s"""
 
-        PROMPT = """DROP TABLE IF EXISTS {table_name}"""
+        parameters = (asset_id,number_candles)
+        table_name = self._timeframe_to_tables(timeframe)
 
-        for table in tables:
-            with self._get_connection() as connection:
-                with connection:
-                    with connection.cursor() as cursor:
-                        cursor.execute(PROMPT.format(table_name=table))
+        with self._get_connection() as connection:
+            with connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(GET_LOOKBACK.format(table_name=table_name),parameters)
+                    candles_tupples = cursor.fetchall()
+
+        candles = []
+        for candle in candles_tupples:
+            candles.append(self.tuple_to_candle(candle,timeframe))
+        candles.reverse()
+        return candles
 
 
 
@@ -155,3 +163,15 @@ class PostgresRepository():
             )
         else:
             return None
+
+
+    def _timeframe_to_tables(self,timeframe:timedelta)->str:
+        if timeframe in self.TIMEFRAME_TO_TABLES:
+            return self.TIMEFRAME_TO_TABLES[timeframe]
+        else:
+            raise ValueError(f"no table for timeframe = {timeframe}")
+
+
+    def close(self)->None:
+        self.connection_pool.closeall()
+    

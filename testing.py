@@ -9,6 +9,7 @@ from core.models import Candle
 from datetime import datetime, timedelta,timezone
 
 
+
 def create_candles(amount:int = 0)->list[Candle]:
     
     if amount != 0:
@@ -105,9 +106,28 @@ def main():
     print(candle.vwap)
     print("last candle foudn")
 
-    
+    candles = postgres_repo.get_lookback("nvidia",timedelta(minutes=60),10)
+    for candle in candles:
+        print(candle.trade_count)
+    print("lookback sucsfull")
+
+
 if __name__ == "__main__":
     main()
 
+
+
+##put into PostgresRepository for testing to work
+
+#def drop_tables(self)->None:
+ #       tables = [table for table in self.TIMEFRAME_TO_TABLES.values()]
+#
+ #       PROMPT = """DROP TABLE IF EXISTS {table_name}"""
+#
+ #       for table in tables:
+  #          with self._get_connection() as connection:
+   #             with connection:
+    #                with connection.cursor() as cursor:
+     #                   cursor.execute(PROMPT.format(table_name=table))
 
 
