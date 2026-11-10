@@ -1,4 +1,5 @@
 from psycopg2.pool import ThreadedConnectionPool
+from psycopg2 import sql
 from core.models import Candle
 from contextlib import contextmanager
 from datetime import timedelta,datetime,timezone
@@ -9,8 +10,8 @@ from core.config import POSTGRES_CONFIG
 class PostgresRepository():
     
     TIMEFRAME_TO_TABLES = {
-        timedelta(minutes= 60): "candle_1hour",
-        timedelta(days=1): "candle_1day",
+        timedelta(minutes= 60): "candle_1h",
+        timedelta(days=1): "candle_1d",
     }
 
 
@@ -34,8 +35,8 @@ class PostgresRepository():
 
 
     def _check_tables(self)->None:
-        CREATE_TABLES = """CREATE TABLE IF NOT EXISTS {table_name}(
-                                    open FLOAT8 NOT NUll,
+        CREATE_TABLES = sql.SQL("""CREATE TABLE IF NOT EXISTS {table_name}(
+                                    open FLOAT8 NOT NULL,
                                     close FLOAT8 NOT NULL,
                                     high FLOAT8 NOT NULL,
                                     low FLOAT8 NOT NULL,
@@ -45,18 +46,18 @@ class PostgresRepository():
                                     timestamp TIMESTAMPTZ NOT NULL,
                                     vwap FLOAT8 NOT NULL,
                                     broker TEXT NOT NULL,
-                                    PRIMARY KEY(asset_id,timestamp,broker)  
-                                ); """
+                                    PRIMARY KEY(asset_id,timestamp)  
+                                ); """)
 
         for  table in self.TIMEFRAME_TO_TABLES.values():
             with self._get_connection() as connection:
                 with connection:
                     with connection.cursor() as cursor:
-                        cursor.execute(CREATE_TABLES.format(table_name=table))
+                        cursor.execute(CREATE_TABLES.format(table_name=sql.Identifier(table)))
 
 
     def insert_candle(self,candle : Candle)->None:
-        INSERT_CANDLES = """INSERT INTO {table_name}(
+        INSERT_CANDLES =sql.SQL( """INSERT INTO {table_name}(
                                 open,
                                 close,
                                 high,
@@ -70,7 +71,7 @@ class PostgresRepository():
                                 ) 
                                 VALUES (
                                 %s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                                ON CONFLICT (asset_id,timestamp,broker) DO NOTHING; """
+                                ON CONFLICT (asset_id,timestamp) DO NOTHING; """)
         
         parameters = (candle.open,candle.close,candle.high,candle.low,candle.asset_id,candle.volume,candle.trade_count,candle.timestamp,candle.vwap,candle.broker)
         table_name = self._timeframe_to_tables(candle.timeframe)
@@ -78,12 +79,12 @@ class PostgresRepository():
         with self._get_connection() as connection:
             with connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(INSERT_CANDLES.format(table_name=table_name),parameters)
+                    cursor.execute(INSERT_CANDLES.format(table_name=sql.Identifier(table_name)),parameters)
 
 
     def get_candles_interval(self,asset_id:str,timeframe:timedelta,start_time:datetime,end_time:datetime)->list[Candle]:
         """gives oldest first"""
-        FIND_CANDLES = """SELECT * FROM {table_name} WHERE asset_id = %s AND timestamp>= %s AND TIMESTAMP<=%s ORDER BY timestamp ASC"""
+        FIND_CANDLES = sql.SQL("""SELECT * FROM {table_name} WHERE asset_id = %s AND timestamp>= %s AND TIMESTAMP<=%s ORDER BY timestamp ASC""")
         
         parameters = (asset_id,start_time,end_time)
         table_name = self._timeframe_to_tables(timeframe)
@@ -91,7 +92,7 @@ class PostgresRepository():
         with self._get_connection() as connection:
             with connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(FIND_CANDLES.format(table_name=table_name),parameters)
+                    cursor.execute(FIND_CANDLES.format(table_name=sql.Identifier(table_name)),parameters)
                     candles_tuples = cursor.fetchall()
         
         candles = []
@@ -101,7 +102,7 @@ class PostgresRepository():
 
 
     def get_last_candle(self,asset_id:str,timeframe:timedelta)->Candle | None:
-        GET_LAST_CANDLES = """SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT 1"""
+        GET_LAST_CANDLES = sql.SQL("""SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT 1""")
 
         parameters = (asset_id,)
         table_name = self._timeframe_to_tables(timeframe)
@@ -109,7 +110,7 @@ class PostgresRepository():
         with self._get_connection() as connection:
             with connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(GET_LAST_CANDLES.format(table_name=table_name),parameters)
+                    cursor.execute(GET_LAST_CANDLES.format(table_name=sql.Identifier(table_name)),parameters)
                     candle= cursor.fetchone()
         
         return self.tuple_to_candle(candle,timeframe)
@@ -117,7 +118,7 @@ class PostgresRepository():
 
     def get_lookback(self,asset_id:str,timeframe:timedelta,number_candles:int)->list[Candle]:
         """oldest first"""
-        GET_LOOKBACK = """SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT %s"""
+        GET_LOOKBACK = sql.SQL("""SELECT * FROM {table_name} WHERE asset_id=%s ORDER BY timestamp DESC LIMIT %s""")
 
         parameters = (asset_id,number_candles)
         table_name = self._timeframe_to_tables(timeframe)
@@ -125,7 +126,7 @@ class PostgresRepository():
         with self._get_connection() as connection:
             with connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(GET_LOOKBACK.format(table_name=table_name),parameters)
+                    cursor.execute(GET_LOOKBACK.format(table_name=sql.Identifier(table_name)),parameters)
                     candles_tupples = cursor.fetchall()
 
         candles = []
