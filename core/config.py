@@ -5,7 +5,6 @@ from datetime import timedelta
 import os
 
 
-###make object containing postgres info wih env
 
 @dataclass(frozen=True,kw_only=True)
 class PostgresConfig():
@@ -17,6 +16,7 @@ class PostgresConfig():
     minimum_connections: int
     maximum_connections: int
 
+
 POSTGRES_CONFIG = PostgresConfig(
                     host = os.getenv('POSTGRES_HOST'),
                     port = int(os.getenv('POSTGRES_PORT')),
@@ -26,8 +26,6 @@ POSTGRES_CONFIG = PostgresConfig(
                     minimum_connections= 0,
                     maximum_connections= 10
 )
-
-
 
 
 @dataclass(frozen=True)

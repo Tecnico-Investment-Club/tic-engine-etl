@@ -34,7 +34,7 @@ def create_candles(amount:int = 0)->list[Candle]:
 
     
     candles = []
-    intervals = [timedelta(minutes=60),timedelta(seconds=60),timedelta(days=1)]
+    intervals = [timedelta(minutes=60),timedelta(days=1)]
     start = datetime(2026, 1, 1,tzinfo=timezone.utc)
     names = ['btc','eth','doge','apple','microsoft','nvidia','toysrus']
 
@@ -82,7 +82,7 @@ def random_datetimes():
 
 def main():
     postgres_repo = PostgresRepository()
-    postgres_repo.kill_table()
+    postgres_repo.drop_tables()
     print("all tables dropped")
 
     
@@ -91,17 +91,17 @@ def main():
 
     candles = create_candles()
     for candle in candles:
-        postgres_repo.insert_candles_new(candle)
+        postgres_repo.insert_candle(candle)
     print("all candles created")
 
     start, end = random_datetimes()
-    candles = postgres_repo.find_candle_interval_new("microsoft",timedelta(minutes=60),start,end)
+    candles = postgres_repo.get_candles_interval("microsoft",timedelta(minutes=60),start,end)
     for candle in candles:
         print(candle.volume)
     print("candles in interval found")
     
 
-    candle = postgres_repo.find_last_candle_new("doge",timedelta(seconds=60))
+    candle = postgres_repo.get_last_candle("doge",timedelta(minutes=60))
     print(candle.vwap)
     print("last candle foudn")
 
