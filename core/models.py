@@ -64,18 +64,19 @@ class Candle():
         if self.low > min(self.open,self.close,self.high):
             raise ValueError("Inconsistency in pricing, low must be smaller than opne,close and high")
 
-        if self.trade_count >0 and not (self.low <= self.vwap <= self.high): ##only check vwap if there were trades, if there were no trades then vwap=0 and low= open which will fail the test dispite logical input. avearage only makes sense if there were trades
+        if self.trade_count >0 and self.vwap != -1 and not (self.low <= self.vwap <= self.high): ##only check vwap if there were trades, if there were no trades then vwap=0 and low= open which will fail the test dispite logical input. avearage only makes sense if there were trades
             raise ValueError("vwap must be between low and high, since it's an average")
 
 
     def _check_volume(self) -> None:
         for attribute in ("volume","trade_count","vwap"):
             value = getattr(self,attribute)
-            if value < 0:
-                raise ValueError(f"{attribute} can not be a negative value, must be equal or superior to 0 can't be {value}")
-        if (self.volume == 0) != (self.trade_count == 0):
-            raise ValueError("if either trade count or volume is 0, then they must both be 0")
-    
+            if value < 0 and value != -1:
+                raise ValueError(f"{attribute} must be equal or superior to 0 can't be {value}")
+        if self.volume != -1 and self.trade_count != -1:
+            if (self.volume == 0) != (self.trade_count == 0):
+                raise ValueError("if either trade count or volume is 0, then they must both be 0")
+        
     def _check_time(self) -> None: 
         if self.timestamp.tzinfo != timezone.utc:
             raise ValueError(f"timestamp must be in UTC, got {self.timestamp.tzinfo}")
