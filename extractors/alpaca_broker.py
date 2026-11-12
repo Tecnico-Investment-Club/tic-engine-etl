@@ -63,7 +63,11 @@ class AlpacaBroker(Broker):
         asset_id: str,
         timeframe: timedelta,
     ) -> Candle:
-
+        
+        for attribute in ("volume","trade_count","vwap"):
+            value = getattr(bar,attribute)
+            if value is not None and value < 0:
+                raise ValueError(f"{attribute} must be greater than or equal to 0, can't be {value}")
         volume = -1.0 if bar.volume is None else float(bar.volume)
         trade_count = -1 if bar.trade_count is None else int(bar.trade_count)
         vwap = -1.0 if bar.vwap is None else float(bar.vwap)

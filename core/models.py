@@ -72,7 +72,7 @@ class Candle():
         for attribute in ("volume","trade_count","vwap"):
             value = getattr(self,attribute)
             if value < 0 and value != -1:
-                raise ValueError(f"{attribute} must be equal or superior to 0 can't be {value}")
+                raise ValueError(f"{attribute} must be greater than or equal to 0, can't be {value}")
         if self.volume != -1 and self.trade_count != -1:
             if (self.volume == 0) != (self.trade_count == 0):
                 raise ValueError("if either trade count or volume is 0, then they must both be 0")
