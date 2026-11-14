@@ -11,22 +11,22 @@ class AlpacaBroker(Broker):
 
     def __init__(
         self,
-        client: CryptoHistoricalDataClient,
+        api_key: str,
+        secret_key: str,
         symbols: dict[str, str],
     ) -> None:
-        self._client = client
+        self._client = CryptoHistoricalDataClient(
+            api_key=api_key,
+            secret_key=secret_key,
+        )
         self._symbols = symbols
 
     def fetch_candles(
         self,
         asset_id: str,
         start: datetime,
-        end: datetime,
         timeframe: timedelta,
     ) -> list[Candle]:
-
-        if start >= end:
-            raise ValueError("Start date must be before end date")
  
         if timeframe == timedelta(hours=1):
             alpaca_timeframe = TimeFrame.Hour
@@ -35,13 +35,15 @@ class AlpacaBroker(Broker):
         else:
             raise ValueError("Unsupported timeframe")
 
+        if asset_id not in self._symbols:
+            raise ValueError(f"Unsupported asset: {asset_id}")
+
         symbol = self._symbols[asset_id]
 
         request = CryptoBarsRequest(
             symbol_or_symbols=symbol,
             timeframe=alpaca_timeframe,
             start=start,
-            end=end,
         )
 
         barset = self._client.get_crypto_bars(request)
