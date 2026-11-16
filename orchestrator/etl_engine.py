@@ -23,7 +23,8 @@ class etlEngine():
                     next_fetch[asset_id,job.timeframe] = start
                     
                 else:
-                    next_fetch[asset_id,job.timeframe] = last_stored.timestamp + job.timeframe
+                    max_lookback_allowed = datetime.now(timezone.utc) - job.timeframe * (job.lookback_bars + 1)
+                    next_fetch[asset_id,job.timeframe] = max(last_stored.timestamp + job.timeframe, max_lookback_allowed)
         return next_fetch
 
     def _fetch_missing(self) -> list[Candle]:
