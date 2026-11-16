@@ -11,7 +11,6 @@ class Broker(ABC):
         self,
         asset_id: str,
         start: datetime,
-        end: datetime,
         timeframe: timedelta,
     ) -> list[Candle]:
         pass
