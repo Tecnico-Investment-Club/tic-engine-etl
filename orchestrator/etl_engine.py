@@ -1,6 +1,7 @@
 from core.config import load_jobs
 from datetime import datetime,timedelta,timezone
 from core.models import Candle
+import json
 
 class etlEngine():
     def __init__(self,alpaca_client, repo):
@@ -60,3 +61,35 @@ class etlEngine():
                 )
 
         return lookbacks
+
+
+    def output(self,lookbacks:dict[tuple[str,timedelta],list[Candle]])->None:
+        items = []
+
+        for (asset_id,timeframe), candles in lookbacks.items():
+            candle_dicts = []
+            for candle in candles:
+                candle_dicts.append({
+                    "timestamp": candle.timestamp.isoformat(),
+                    "open": candle.open,
+                    "close": candle.close,
+                    "high": candle.high,
+                    "low": candle.low,
+                    "volume": candle.volume,
+                    "trade_count": candle.trade_count,
+                    "vwap": candle.vwap
+                })
+
+            items.append({
+                "asset_id": asset_id,
+                "timeframe_seconds": int(timeframe.total_seconds()),
+                "lookback": len(candle_dicts),
+                "candles": candle_dicts
+            })
+
+        data = {"lookback_time": datetime.now(timezone.utc).isoformat(),
+                "items": items
+                }
+
+        with open("lookback_file.json","w") as file:
+            json.dump(data,file,indent=2)

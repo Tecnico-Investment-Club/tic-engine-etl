@@ -19,7 +19,7 @@ def main():
     engine = etlEngine(alpaca_client, postgres_repo)
 
     lookbacks = engine.run()
-    
+    engine.output(lookbacks)
     
 if __name__ == "__main__":
     main()
