@@ -64,8 +64,7 @@ class Candle():
         if self.low > min(self.open,self.close,self.high):
             raise ValueError("Inconsistency in pricing, low must be smaller than opne,close and high")
 
-        if self.trade_count >0 and self.vwap != -1 and not (self.low <= self.vwap <= self.high): ##only check vwap if there were trades, if there were no trades then vwap=0 and low= open which will fail the test dispite logical input. avearage only makes sense if there were trades
-            raise ValueError("vwap must be between low and high, since it's an average")
+        
 
 
     def _check_volume(self) -> None:
