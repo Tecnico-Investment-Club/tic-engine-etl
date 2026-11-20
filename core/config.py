@@ -16,13 +16,20 @@ class PostgresConfig():
     minimum_connections: int
     maximum_connections: int
 
+def find_envfile(attribute:str)->str:
+    value = os.getenv(attribute)
+    if value is not None:
+        return value
+    else:
+        raise ValueError(f"{attribute} is not defined in .env")  ##mypy was complaining that getenv could return None if it's not set
+
 
 POSTGRES_CONFIG = PostgresConfig(
-                    host = os.getenv('POSTGRES_HOST'),
-                    port = int(os.getenv('POSTGRES_PORT')),
-                    database = os.getenv('POSTGRES_DB'),
-                    user = os.getenv('POSTGRES_USER'),
-                    password= os.getenv('POSTGRES_PASSWORD'),
+                    host = find_envfile('POSTGRES_HOST'),
+                    port = int(find_envfile('POSTGRES_PORT')),
+                    database = find_envfile('POSTGRES_DB'),
+                    user = find_envfile('POSTGRES_USER'),
+                    password= find_envfile('POSTGRES_PASSWORD'),
                     minimum_connections= 0,
                     maximum_connections= 10
 )

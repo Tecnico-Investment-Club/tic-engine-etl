@@ -93,8 +93,8 @@ for attributes in TYPES.values():
         checked_attributes.append(attribute)
 
 candle_attributes = []
-for attribute in fields(Candle):
-    candle_attributes.append(attribute.name)
+for field in fields(Candle):
+    candle_attributes.append(field.name)
 
 if sorted(checked_attributes) != sorted(candle_attributes):
     raise RuntimeError("Not all candle attributes are being type checked")
