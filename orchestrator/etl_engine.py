@@ -3,7 +3,9 @@ from datetime import datetime,timedelta,timezone
 from core.models import Candle
 import json
 from time import sleep
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 class etlEngine():
@@ -111,21 +113,27 @@ class etlEngine():
 
 
     def run(self)->None:
-        
+
+        logger.info("starting warmup run")
         lookback = self.run_cycle()
         self.output(lookback)
+        
         
         smallest_timeframe = find_smallest_timeframe(self.jobs)
         WAIT_AFTER_TIMEFRAME = timedelta(minutes=1)
         wait_seconds = self.seconds_until_next_cycle(smallest_timeframe,WAIT_AFTER_TIMEFRAME)
-        
+
+        logger.info(f"warmup completed sleeping for {wait_seconds} seconds ")
         sleep(wait_seconds)
         
         while True:
             try:
                 lookback = self.run_cycle()
                 self.output(lookback)
+                logger.info("ran cycle sucefully")
             except Exception:
+                logger.exception("faiiled to run cycle")
                 pass
-
-            sleep(self.seconds_until_next_cycle(smallest_timeframe,WAIT_AFTER_TIMEFRAME))
+            wait_seconds = self.seconds_until_next_cycle(smallest_timeframe,WAIT_AFTER_TIMEFRAME)
+            logger.info(f"slepping for {wait_seconds}")
+            sleep(wait_seconds)
