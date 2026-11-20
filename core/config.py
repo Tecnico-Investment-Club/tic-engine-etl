@@ -46,4 +46,5 @@ def load_jobs(path: str = "assets.json") -> list[AssetJob]:
 
     return [AssetJob(**job) for job in entries["asset_jobs"]]
 
-
+def find_smallest_timeframe(jobs:list[AssetJob])->timedelta:
+    return min(job.timeframe for job in jobs)

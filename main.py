@@ -3,6 +3,8 @@ import os
 from core.config import load_jobs
 from extractors.alpaca_broker import AlpacaBroker
 from orchestrator.etl_engine import etlEngine
+from datetime import datetime,timedelta,timezone
+
 
 
 def main():
@@ -18,8 +20,8 @@ def main():
 
     engine = etlEngine(alpaca_client, postgres_repo)
 
-    lookbacks = engine.run()
-    engine.output(lookbacks)
+    engine.run()
+    
     
 if __name__ == "__main__":
     main()
