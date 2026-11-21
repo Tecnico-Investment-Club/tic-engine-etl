@@ -16,3 +16,6 @@ venv/
 env/
 
 .vscode/
+
+lookback_file.json
+etl-engine-logs.log

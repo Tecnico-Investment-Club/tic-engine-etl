@@ -1,14 +1,19 @@
-from core.config import load_jobs
+from core.config import load_jobs,find_smallest_timeframe
 from datetime import datetime,timedelta,timezone
 from core.models import Candle
 import json
+from time import sleep
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class etlEngine():
     def __init__(self,alpaca_client, repo):
         self.jobs = load_jobs()
         self.repo = repo
         self.alpaca_client = alpaca_client
-   
+    
     
 
     def _get_next_fetch(self)->dict[tuple[str,timedelta],datetime]:
@@ -42,7 +47,7 @@ class etlEngine():
 
         return all_candles
 
-    def run(self) -> dict[tuple[str, timedelta], list[Candle]]:
+    def run_cycle(self) -> dict[tuple[str, timedelta], list[Candle]]:
         candles = self._fetch_missing()
 
         now = datetime.now(timezone.utc)
@@ -94,3 +99,41 @@ class etlEngine():
 
         with open("lookback_file.json","w") as file:
             json.dump(data,file,indent=2)
+
+
+
+    
+    @staticmethod
+    def seconds_until_next_cycle(smallest_timeframe:timedelta,wait_after_timeframe:timedelta)->int:
+        now = datetime.now(timezone.utc)
+        now = now.replace(minute=0,second=0,microsecond=0)
+        next_time = now + smallest_timeframe + wait_after_timeframe
+        interval =next_time -  datetime.now(timezone.utc) 
+        return int(interval.total_seconds())
+
+
+    def run(self)->None:
+
+        logger.info("starting warmup run")
+        lookback = self.run_cycle()
+        self.output(lookback)
+        
+        
+        smallest_timeframe = find_smallest_timeframe(self.jobs)
+        WAIT_AFTER_TIMEFRAME = timedelta(minutes=1)
+        wait_seconds = self.seconds_until_next_cycle(smallest_timeframe,WAIT_AFTER_TIMEFRAME)
+
+        logger.info(f"warmup completed sleeping for {wait_seconds} seconds ")
+        sleep(wait_seconds)
+        
+        while True:
+            try:
+                lookback = self.run_cycle()
+                self.output(lookback)
+                logger.info("ran cycle sucefully")
+            except Exception:
+                logger.exception("faiiled to run cycle")
+                pass
+            wait_seconds = self.seconds_until_next_cycle(smallest_timeframe,WAIT_AFTER_TIMEFRAME)
+            logger.info(f"slepping for {wait_seconds}")
+            sleep(wait_seconds)
